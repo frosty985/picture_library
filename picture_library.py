@@ -41,6 +41,10 @@ try:
         raise Exception("File", "Empty")
     con_database = config["database"]
     con_debug = config["debug"]
+    if con_debug.getboolean("display"):
+        show = True
+    else:
+        show = False
 
 except:
     print("\nError reading config file.\nPlease check it is valid, and try again\n")
@@ -48,11 +52,7 @@ except:
 
 """ Detect faces for training """
 if args.action == "a" or args.action == "all" or args.action == "t" or args.action == "detect":
-    if con_debug.getboolean("display"):
-        show = True
-    else:
-        show = False
-    img_cat = str(is_face(args.image, show))
+    img_cat = str(is_face(args.image, debug=True))
     if con_debug.getboolean("message"):
         print("[Debug]\t" + args.image + " is found to be: " + str(img_cat))
 
