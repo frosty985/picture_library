@@ -3,9 +3,9 @@ from argparse import RawTextHelpFormatter
 import os.path
 import configparser
 import pymysql
-from cat import is_face
+import cat
+import mysql_actions
 from exif import imgDetails
-from mysql_actions import insert_file
 
 
 """ Set program arguments """
@@ -17,7 +17,7 @@ parser.add_argument("-a", "--action", type=str, default="all", help="Action to d
                                                                     "fa(c)e: facial regonisation,\n" +
                                                                     "de(t)ect: detect faces for training data, use with -o --out\n"+
                                                                     "(r)efresh: images in the database")
-parser.add_argument("-o", "--output", type=str, default="~/piclib", help="Output directory")
+parser.add_argument("-o", "--outdir", type=str, default="/tmp/piclib", help="Output directory")
 parser.add_argument("-c", "--config", type=str, default="config.ini", help="Location of config file")
 
 args = parser.parse_args()
@@ -40,38 +40,50 @@ try:
     if(len(config.sections()) == 0):
         raise Exception("File", "Empty")
     con_database = config["database"]
+
     con_debug = config["debug"]
     if con_debug.getboolean("display"):
         show = True
     else:
         show = False
-
+    print("Show is " + str(show))
+    if con_debug.getboolean("messages"):
+        debug = True
+    else:
+        debug = False
+    print("Debug is " + str(debug))
 except:
     print("\nError reading config file.\nPlease check it is valid, and try again\n")
     exit()
 
 """ Detect faces for training """
 if args.action == "a" or args.action == "all" or args.action == "t" or args.action == "detect":
-    img_cat = str(is_face(args.image, debug=True))
-    if con_debug.getboolean("message"):
+    img_cat = str(cat.is_face(args.image, outdir=args.outdir, debug=debug, show=show))
+    if debug:
         print("[Debug]\t" + args.image + " is found to be: " + str(img_cat))
 
-""" Insert into database """
-if args.action == "a" or args.action == "all" or args.action == "D" or args.action == "database":
 
-    try:
-        mysqlConnection = pymysql.connect(host=con_database["host"],
-                                          user=con_database["user"],
-                                          db=con_database["data"],
-                                          passwd=con_database["pass"],
-                                          autocommit=True)
-        mysqlCur = mysqlConnection.cursor()
-    except:
-        print("\nThere was an error connecting to the MySQL database.\nPlease check your config file and try again.\n")
-        exit()
+    """ Insert into database """
+    if args.action == "a" or args.action == "all" or args.action == "D" or args.action == "database":
 
-    if con_debug.getboolean("message"):
+        try:
+            mysqlConnection = pymysql.connect(host=con_database["host"],
+                                              user=con_database["user"],
+                                              db=con_database["data"],
+                                              passwd=con_database["pass"],
+                                              autocommit=True)
+            mysqlCur = mysqlConnection.cursor()
+        except:
+            print("\nThere was an error connecting to the MySQL database.\nPlease check your config file and try again.\n")
+            exit()
+
         img_details = imgDetails(args.image)
-        print("[Debug]\t" + str(img_details))
-        print("[Debug]\t Atempting to insert into database")
-        insert_file(mysqlCur, args.image, img_details)
+        if debug:
+            print("[Debug]\t" + str(img_details))
+            print("[Debug]\t Atempting to insert into database")
+        mysql_actions.insert_file(mysqlCur, args.image, img_details, debug=debug)
+
+        if img_cat != None:
+            if debug:
+                print("[Debug]\tSetting cat in database")
+            mysql_actions.set_con(mysqlCur, args.image, img_cat, debug=debug)

@@ -10,7 +10,18 @@ glasses_cascade = cv2.CascadeClassifier('haarcascade_eye_tree_eyeglasses.xml')
 exec_time = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
 
 """ look for a face in the current image"""
-def is_face(imgName, show=False, outdir="/tmp/piclib", debug=False):
+def save_img(outdir, cat, imgname, img, debug=False):
+    if debug:
+        print("[Debug]\tSaving file '" + imgname + "' to '" + outdir + "/" + cat + "/" + imgname)
+    try:
+        cv2.imwrite(outdir + "/" + cat + "/" + imgname, img)
+    except Exception as e:
+        print ("[Error]\tUnable to save image : " + str(e))
+
+
+def is_face(inimg, outdir="/tmp/piclib", show=False, debug=False):
+    imgname = os.path.splitext(os.path.basename(inimg))[0]
+
     cat = "Uncategorised"
     roi_face = None
     roi_color = None
@@ -27,25 +38,25 @@ def is_face(imgName, show=False, outdir="/tmp/piclib", debug=False):
         except Exception as e:
             print ("\nThere was an error creating directory:\t" + outdir)
             exit()
-    if not (os.path.exists(outdir + "/face")):
+    if not (os.path.exists(outdir + "/Face")):
         try:
-            os.makedirs(outdir + "/face")
+            os.makedirs(outdir + "/Face")
         except Exception as e:
-            print("\nThere was an error creating directory:\t" + outdir + "/face")
+            print("\nThere was an error creating directory:\t" + outdir + "/Face")
             exit()
-    if not (os.path.exists(outdir + "/possible")):
+    if not (os.path.exists(outdir + "/Possible")):
         try:
-            os.makedirs(outdir + "/possible")
+            os.makedirs(outdir + "/Possible")
         except Exception as e:
-            print ("\nThere was an error creating directory:\t" + outdir + "/possible")
+            print ("\nThere was an error creating directory:\t" + outdir + "/Possible")
             exit()
 
 
     """ Check image exists """
     if debug:
         print("[Debug]\tChecking image exists")
-    if (os.path.exists(imgName) == False):
-        print("\nFile " + imgName + " does not exist")
+    if (os.path.exists(inimg) == False):
+        print("\nFile " + inimg + " does not exist")
         exit()
 
     """
@@ -54,9 +65,9 @@ def is_face(imgName, show=False, outdir="/tmp/piclib", debug=False):
     create a copy to use later for saving
     """
     if debug:
-        print("[Debug]\tLoading image to work with: '" + imgName + "'")
+        print("[Debug]\tLoading image to work with: '" + inimg + "'")
     try:
-        img = cv2.imread(imgName)
+        img = cv2.imread(inimg)
         # resize image
         r = 1000.00 / img.shape[1]
         dim = (1000, int(img.shape[0] * r))
@@ -74,7 +85,6 @@ def is_face(imgName, show=False, outdir="/tmp/piclib", debug=False):
         for (x, y, w, h,) in faces:
             if debug:
                 print("[Debug]\tChecking for eyes")
-            counter += 1
             cat = "Possible Face"
 
             roi_gray = imgGray[y:y + h, x:x + w]
@@ -89,6 +99,7 @@ def is_face(imgName, show=False, outdir="/tmp/piclib", debug=False):
 
             #check for eyes
             for (ex, ey, ew, eh) in eyes:
+
                 cv2.rectangle(roi_color, (ex, ey), (ex + ew, ey + eh), (255, 0, 0), 2)
                 if debug:
                     print("[Debug]\tEyes found, must be a face")
@@ -96,11 +107,13 @@ def is_face(imgName, show=False, outdir="/tmp/piclib", debug=False):
                 """
                 face has been found, save to the right directory
                 """
-                cv2.imwrite(outdir + "/face/" + imgName + "-" + str(counter) + ".jpg", roi_face)
 
+                counter += 1
+                save_img(outdir, cat, imgname + "-" + str(counter) + ".jpg", roi_face, debug=debug)
+                #cv2.imwrite(outdir + "/" + cat + "/" + imgname + "-" + str(counter) + ".jpg", roi_face)
             # check for glasses
             if len(eyes) >= 0:
-                counter += 1
+
                 glasses = glasses_cascade.detectMultiScale(roi_gray)
 
                 if debug:
@@ -109,17 +122,21 @@ def is_face(imgName, show=False, outdir="/tmp/piclib", debug=False):
                 for (gx, gy, gw, gh) in glasses:
                     cv2.rectangle(roi_color, (gx, gy), (gx + gw, gy + gh), (0, 0, 255), 2)
                     cat = "Face"
-
                     """
                     face has been found, save to the right directory
                     """
-                    cv2.imwrite(outdir + "/face/" + imgName + "-" + str(counter) + ".jpg", roi_face)
+                    counter += 1
+                    save_img(outdir, cat, imgname + "-" + str(counter) + ".jpg", roi_face,
+                             debug=debug)
 
             if len(eyes) == 0:
                 """
                 a 'possible' face has been found, save to the right directory
                 """
-                cv2.imwrite(outdir + "/possible/" + imgName + "-" + str(counter) + ".jpg", roi_face)
+                cat = "Possible"
+                counter += 1
+                save_img(outdir, cat, imgname + "-" + str(counter) + ".jpg", roi_face,
+                         debug=debug)
 
         if show:
             cv2.imshow("Faces", resized)
