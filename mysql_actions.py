@@ -32,8 +32,8 @@ def get_pic_id(cur, filename, debug=False):
     row = cur.fetchone()
     while row is not None:
         if debug:
-            print(filename + " is " + row[0])
-        return row[0]
+            print(filename + " is " + row["id"])
+        return row["id"]
     else:
         return None
 
@@ -45,8 +45,8 @@ def get_con_id(cur, cat, debug=False):
     row = cur.fetchone()
     while row is not None:
         if debug:
-            print("[Debug]\t" + cat + " is "+ str(row[0]))
-        return row[0]
+            print("[Debug]\t" + cat + " is " + str(row["id"]))
+        return row["id"]
     else:
         return None
 
@@ -71,6 +71,8 @@ def set_con(cur, filename, cat, debug=False):
         sql = "SELECT id FROM pic_con WHERE pid = '{}' AND cid = '{}'".format(str(pid), str(cid))
         cur.execute(sql)
         if cur.rowcount == 0:
+            if debug:
+                print("[Debug]\tData is already in database, skipping")
             sql = "INSERT INTO pic_con (id, pid, cid) VALUES (REPLACE(UUID(), '-', ''), '{}', '{}')".format(str(pid), str(cid))
             if debug:
                 print("[Debug]\tRunning sql: ({})".format(sql))

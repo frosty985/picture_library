@@ -3,8 +3,11 @@ from argparse import RawTextHelpFormatter
 import os.path
 import configparser
 import pymysql
+
 import cat
 import mysql_actions
+import face_rec
+
 from exif import imgDetails
 
 
@@ -71,7 +74,8 @@ if args.action == "a" or args.action == "all" or args.action == "t" or args.acti
                                               user=con_database["user"],
                                               db=con_database["data"],
                                               passwd=con_database["pass"],
-                                              autocommit=True)
+                                              autocommit=True,
+                                              cursorclass=pymysql.cursors.DictCursor)
             mysqlCur = mysqlConnection.cursor()
         except:
             print("\nThere was an error connecting to the MySQL database.\nPlease check your config file and try again.\n")
@@ -87,3 +91,8 @@ if args.action == "a" or args.action == "all" or args.action == "t" or args.acti
             if debug:
                 print("[Debug]\tSetting cat in database")
             mysql_actions.set_con(mysqlCur, args.image, img_cat, debug=debug)
+
+if args.action == "a" or args.action == "all" or args.action == "c" or args.action == "regcon":
+    if debug:
+        print("[Debug]\tStarting facial recognition")
+    face_rec.face_rec(args.image, mysqlCur, debug=debug, show=show)

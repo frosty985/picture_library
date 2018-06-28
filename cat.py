@@ -89,8 +89,9 @@ def is_face(inimg, outdir="/tmp/piclib", show=False, debug=False):
 
             roi_gray = imgGray[y:y + h, x:x + w]
             roi_color = resized[y:y + h, x:x + w]
-
             roi_face = copy_resized[y:y + h, x:x + w]
+            if show:
+                cv2.imshow("Face found: " + str(counter), roi_color)
 
             cv2.rectangle(resized, (x, y), (x + w, y + h), (0, 255, 0), 2)
 
@@ -100,7 +101,7 @@ def is_face(inimg, outdir="/tmp/piclib", show=False, debug=False):
             #check for eyes
             for (ex, ey, ew, eh) in eyes:
 
-                cv2.rectangle(roi_color, (ex, ey), (ex + ew, ey + eh), (255, 0, 0), 2)
+                # cv2.rectangle(roi_color, (ex, ey), (ex + ew, ey + eh), (255, 0, 0), 2)
                 if debug:
                     print("[Debug]\tEyes found, must be a face")
                 cat = "Face"
@@ -120,7 +121,7 @@ def is_face(inimg, outdir="/tmp/piclib", show=False, debug=False):
                     print("[Debug]\tGlasses found: " + str(glasses))
 
                 for (gx, gy, gw, gh) in glasses:
-                    cv2.rectangle(roi_color, (gx, gy), (gx + gw, gy + gh), (0, 0, 255), 2)
+                    #cv2.rectangle(roi_color, (gx, gy), (gx + gw, gy + gh), (0, 0, 255), 2)
                     cat = "Face"
                     """
                     face has been found, save to the right directory
@@ -139,8 +140,8 @@ def is_face(inimg, outdir="/tmp/piclib", show=False, debug=False):
                          debug=debug)
 
         if show:
-            cv2.imshow("Faces", resized)
-            cv2.imshow("Faces1", roi_color)
+            cv2.imshow("Face Dection", resized)
+
             cv2.waitKey(0)
         return(cat)
 
