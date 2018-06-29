@@ -23,6 +23,8 @@ def insert_file(cur, filename, data, debug=False):
         if debug:
             ("[Debug]\tRunning sql : " + str(sql))
         cur.execute(str(sql))
+    return
+
 
 def get_pic_id(cur, filename, debug=False):
     sql = str("SELECT id FROM pictures WHERE filename = '{}'").format(filename)
@@ -37,6 +39,7 @@ def get_pic_id(cur, filename, debug=False):
     else:
         return None
 
+
 def get_con_id(cur, cat, debug=False):
     sql = str("SELECT id FROM contains WHERE contains.contains = '{}'").format(cat)
     if debug:
@@ -49,6 +52,7 @@ def get_con_id(cur, cat, debug=False):
         return row["id"]
     else:
         return None
+
 
 def set_con(cur, filename, cat, debug=False):
     """
@@ -77,3 +81,26 @@ def set_con(cur, filename, cat, debug=False):
             if debug:
                 print("[Debug]\tRunning sql: ({})".format(sql))
                 cur.execute(sql)
+    return
+
+
+def remove_notcat(cur, filename, debug=False):
+    """
+    Remove "Uncatagorised" from pic_con link table
+    :param cur: MySQL cursor
+    :param filename: Image filename in question
+    :return:
+    """
+    sql = "SELECT id FROM pictures WHERE filename = '{}'".format(filename)
+    cur.execute(sql)
+    pid = cur._rows[0]["id"]
+
+    sql = "SELECT id FROM contains WHERE contains = 'Uncatagorised'"
+    cur.execute(sql)
+    cid = cur._rows[0]["id"]
+
+    if pid is not None and cid is not None:
+        sql = "DELETE FROM pic_con WHERE pid = '{}' AND cid = '{}'".format(pid, cid)
+        cur.execute(sql)
+
+    return

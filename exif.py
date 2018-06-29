@@ -36,9 +36,11 @@ def get_lat_lon(file_to_process):
     lat = None
     lon = None
     gps_latitude = _get_if_exist(file_to_process, "GPS GPSLatitude")
-    gps_latitude_ref = _get_if_exist(file_to_process, 'GPS GPSLatitudeRef').values
+    if gps_latitude is not None:
+        gps_latitude_ref = _get_if_exist(file_to_process, 'GPS GPSLatitudeRef').values
     gps_longitude = _get_if_exist(file_to_process, 'GPS GPSLongitude')
-    gps_longitude_ref = _get_if_exist(file_to_process, 'GPS GPSLongitudeRef').values
+    if gps_longitude is not None:
+        gps_longitude_ref = _get_if_exist(file_to_process, 'GPS GPSLongitudeRef').values
 
     if gps_latitude and gps_latitude_ref and gps_longitude and gps_longitude_ref:
         lat = _convert_to_degress(gps_latitude)

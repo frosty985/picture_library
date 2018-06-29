@@ -1,16 +1,60 @@
 import cv2
 import os
 import copy
-import sys
-from datetime import datetime
+import random
+
+"""
+Main prgram for detecting objects
+Currently only faces
+"""
+# todo Add more detection type
+
+
+""" haarcasades """
+# fixme check file exists, turn on/off below options if they don't
 
 face_cascade = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
 eye_cascade = cv2.CascadeClassifier('haarcascade_eye.xml')
 glasses_cascade = cv2.CascadeClassifier('haarcascade_eye_tree_eyeglasses.xml')
-exec_time = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
 
-""" look for a face in the current image"""
+
+def rnd_col(b=256, g=256, r=256):
+    b = random.randint(0, int(b))
+    g = random.randint(0, int(g))
+    r = random.randint(0, int(r))
+    color = (b, g, r)
+    return color
+
+
+"""
+where a ROI has been found, save it to outdir ready to be used to train the facial recognistion
+"""
 def save_img(outdir, cat, imgname, img, debug=False):
+    """
+    Save ROI
+    :param outdir: set in config.ini
+    :param cat: determinned
+    :param imgname: filename of current file
+    :param img: store/working image
+    :param debug: print debug to command line
+    :return:
+    """
+    """ check for output dirs """
+    if not (os.path.exists(str(outdir))):
+        print("Output directory doesn't exist, trying to create")
+        try:
+            os.makedirs(str(outdir))
+        except Exception as e:
+            print("\nThere was an error creating directory:\t" + str(outdir))
+            exit()
+
+    if not (os.path.exists(outdir + "/" + str(cat))):
+        try:
+            os.makedirs(outdir + "/" + str(cat))
+        except Exception as e:
+            print("\nThere was an error creating directory:\t" + outdir + "/" + str(cat))
+            exit()
+
     if debug:
         print("[Debug]\tSaving file '" + imgname + "' to '" + outdir + "/" + cat + "/" + imgname)
     try:
@@ -19,10 +63,12 @@ def save_img(outdir, cat, imgname, img, debug=False):
         print ("[Error]\tUnable to save image : " + str(e))
 
 
+""" look for a face in the current image"""
 def is_face(inimg, outdir="/tmp/piclib", show=False, debug=False):
     imgname = os.path.splitext(os.path.basename(inimg))[0]
 
-    cat = "Uncategorised"
+    # cat = "Uncategorised"
+    cat = None
     roi_face = None
     roi_color = None
     roi_gray = None
@@ -30,26 +76,6 @@ def is_face(inimg, outdir="/tmp/piclib", show=False, debug=False):
     """ Check/create working dirs """
     if debug:
         print("[Debug]\tChecking working directories exist")
-
-    if not (os.path.exists(outdir)):
-        print("Directory doesn't exist, trying to create")
-        try:
-            os.makedirs(outdir)
-        except Exception as e:
-            print ("\nThere was an error creating directory:\t" + outdir)
-            exit()
-    if not (os.path.exists(outdir + "/Face")):
-        try:
-            os.makedirs(outdir + "/Face")
-        except Exception as e:
-            print("\nThere was an error creating directory:\t" + outdir + "/Face")
-            exit()
-    if not (os.path.exists(outdir + "/Possible")):
-        try:
-            os.makedirs(outdir + "/Possible")
-        except Exception as e:
-            print ("\nThere was an error creating directory:\t" + outdir + "/Possible")
-            exit()
 
 
     """ Check image exists """
@@ -82,65 +108,70 @@ def is_face(inimg, outdir="/tmp/piclib", show=False, debug=False):
         if debug:
             print("[Debug] Possible faces found: " + str(faces))
         counter = 0
-        for (x, y, w, h,) in faces:
-            if debug:
-                print("[Debug]\tChecking for eyes")
-            cat = "Possible Face"
-
-            roi_gray = imgGray[y:y + h, x:x + w]
-            roi_color = resized[y:y + h, x:x + w]
-            roi_face = copy_resized[y:y + h, x:x + w]
-            if show:
-                cv2.imshow("Face found: " + str(counter), roi_color)
-
-            cv2.rectangle(resized, (x, y), (x + w, y + h), (0, 255, 0), 2)
-
-            eyes = eye_cascade.detectMultiScale(roi_gray)
-            print("[Debug] Eyes found: " + str(eyes))
-
-            #check for eyes
-            for (ex, ey, ew, eh) in eyes:
-
-                # cv2.rectangle(roi_color, (ex, ey), (ex + ew, ey + eh), (255, 0, 0), 2)
-                if debug:
-                    print("[Debug]\tEyes found, must be a face")
-                cat = "Face"
-                """
-                face has been found, save to the right directory
-                """
-
+        if len(faces) is not 0:
+            for (x, y, w, h,) in faces:
                 counter += 1
-                save_img(outdir, cat, imgname + "-" + str(counter) + ".jpg", roi_face, debug=debug)
-                #cv2.imwrite(outdir + "/" + cat + "/" + imgname + "-" + str(counter) + ".jpg", roi_face)
-            # check for glasses
-            if len(eyes) >= 0:
-
-                glasses = glasses_cascade.detectMultiScale(roi_gray)
 
                 if debug:
-                    print("[Debug]\tGlasses found: " + str(glasses))
+                    print("[Debug]\tChecking for eyes")
+                cat = "Possible Face"
 
-                for (gx, gy, gw, gh) in glasses:
-                    #cv2.rectangle(roi_color, (gx, gy), (gx + gw, gy + gh), (0, 0, 255), 2)
+                roi_gray = imgGray[y:y + h, x:x + w]
+                roi_color = resized[y:y + h, x:x + w]
+                roi_face = copy_resized[y:y + h, x:x + w]
+
+                if show:
+                    cv2.imshow("Face found: " + str(counter), roi_color)
+
+                cv2.rectangle(resized, (x, y), (x + w, y + h), rnd_col(255, 255, 255), 2)
+
+                eyes = eye_cascade.detectMultiScale(roi_gray)
+                print("[Debug] Eyes found: " + str(eyes))
+
+                # check for eyes
+                for (ex, ey, ew, eh) in eyes:
+
+                    # cv2.rectangle(roi_color, (ex, ey), (ex + ew, ey + eh), (255, 0, 0), 2)
+                    if debug:
+                        print("[Debug]\tEyes found, must be a face")
                     cat = "Face"
                     """
                     face has been found, save to the right directory
                     """
-                    counter += 1
-                    save_img(outdir, cat, imgname + "-" + str(counter) + ".jpg", roi_face,
-                             debug=debug)
 
-            if len(eyes) == 0:
-                """
-                a 'possible' face has been found, save to the right directory
-                """
-                cat = "Possible"
-                counter += 1
-                save_img(outdir, cat, imgname + "-" + str(counter) + ".jpg", roi_face,
-                         debug=debug)
+                    counter += 1
+                    # save_img(outdir, cat, imgname + "-" + str(counter) + ".jpg", roi_face, debug=debug)
+                    # cv2.imwrite(outdir + "/" + cat + "/" + imgname + "-" + str(counter) + ".jpg", roi_face)
+
+                # check for glasses
+                if len(eyes) is not 0:
+
+                    glasses = glasses_cascade.detectMultiScale(roi_gray)
+
+                    if debug:
+                        print("[Debug]\tGlasses found: " + str(glasses))
+
+                    for (gx, gy, gw, gh) in glasses:
+                        # cv2.rectangle(roi_color, (gx, gy), (gx + gw, gy + gh), (0, 0, 255), 2)
+                        cat = "Face"
+                        """
+                        face has been found, save to the right directory
+                        """
+                        counter += 1
+                        # save_img(outdir, cat, imgname + "-" + str(counter) + ".jpg", roi_face,
+                        #         debug=debug)
+
+                if len(eyes) == 0 and len(glasses) == 0:
+                    """
+                    a 'possible' face has been found, save to the right directory
+                    """
+                    cat = "Possible"
+                    counter += 1
+
+                save_img(outdir, cat, imgname + "-" + str(counter) + ".jpg", roi_face, debug=debug)
 
         if show:
-            cv2.imshow("Face Dection", resized)
+            cv2.imshow("Filename: " + str(imgname), resized)
 
             cv2.waitKey(0)
         return(cat)
