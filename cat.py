@@ -126,7 +126,8 @@ def is_face(inimg, outdir="/tmp/piclib", show=False, debug=False):
                 cv2.rectangle(resized, (x, y), (x + w, y + h), rnd_col(255, 255, 255), 2)
 
                 eyes = eye_cascade.detectMultiScale(roi_gray)
-                print("[Debug] Eyes found: " + str(eyes))
+                if debug:
+                    print("[Debug] Eyes found: " + str(eyes))
 
                 # check for eyes
                 for (ex, ey, ew, eh) in eyes:
