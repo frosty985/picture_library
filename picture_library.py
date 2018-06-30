@@ -102,7 +102,25 @@ except:
     exit()
 
 
-def insert_file(filename, cat=None, debug=False):
+def add_cat(filename, img_cat):
+    #if img_cat is None:
+    #    img_cat = "Uncatagorised"
+    if debug:
+        print("[Debug]\t" + filename + " is found to be: " + str(img_cat))
+
+    """ Insert into database """
+#    insert_file(str(filename), img_cat)
+
+    if debug:
+        print("[Debug]\tSetting cat in database")
+
+    """ remove "not categorised" from link table if is there """
+    mysql_actions.remove_notcat(mysqlCur, filename, debug=debug)
+    """ insert in cat """
+    mysql_actions.set_con(mysqlCur, filename, img_cat, debug=debug)
+
+
+def insert_file(filename, img_cat=None, debug=False):
     """
     Insert filename into database
     :param filename:
@@ -110,31 +128,15 @@ def insert_file(filename, cat=None, debug=False):
     :param debug:
     :return:
     """
-    if cat is None:
-        cat = "Uncatagorised"
+    if img_cat is None:
+        img_cat = "Uncatagorised"
     img_details = imgDetails(filename)
     if debug:
         print("[Debug]\t" + str(img_details))
         print("[Debug]\t Atempting to insert into database")
     mysql_actions.insert_file(mysqlCur, filename, img_details, debug=debug)
-    mysql_actions.set_con(mysqlCur, filename, cat, debug=debug)
-
-
-def add_cat(filename, img_cat):
-    if debug:
-        print("[Debug]\t" + filename + " is found to be: " + str(img_cat))
-
-    """ Insert into database """
-    if args.action == "a" or args.action == "all" or args.action == "D" or args.action == "database":
-        insert_file(str(filename), img_cat)
-
-        if debug:
-            print("[Debug]\tSetting cat in database")
-
-        """ remove "not categorised" from link table if is there """
-        mysql_actions.remove_notcat(mysqlCur, filename, debug=debug)
-        """ insert in cat """
-        mysql_actions.set_con(mysqlCur, filename, img_cat, debug=debug)
+ #   mysql_actions.set_con(mysqlCur, filename, cat, debug=debug)
+    add_cat(filename, img_cat)
 
 
 """"
@@ -147,6 +149,7 @@ insert the filename and cat details into the database
 
 
 if args.action == "a" or args.action == "all":
+    img_cat = None
     if debug:
         print("[Debug]\tRunning all actions")
 
@@ -155,8 +158,8 @@ if args.action == "a" or args.action == "all":
         print("[Debug]\tPicture has cat of : " + str(img_cat))
 
     insert_file(str(args.image), str(img_cat))
+    add_cat(args.image, img_cat)
     if img_cat is not None:
-        add_cat(args.image, img_cat)
         face_rec.face_rec(args.image, mysqlCur, debug=debug, show=show)
 
 
@@ -167,7 +170,6 @@ elif args.action == "t" or args.action == "detect":
     img_cat = cat.is_face(args.image, outdir=args.outdir, debug=debug, show=show)
     if debug:
         print("[Debug]\tPicture has cat of : " + str(img_cat))
-
     add_cat(args.image, str(img_cat))
 
 elif args.action == "c" or args.action == "regcon":

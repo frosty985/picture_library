@@ -54,7 +54,7 @@ def get_con_id(cur, cat, debug=False):
         return None
 
 
-def set_con(cur, filename, cat, debug=False):
+def set_con(cur, filename, img_cat=None, debug=False):
     """
     Populate the pic_con table
     :param cur:
@@ -62,9 +62,12 @@ def set_con(cur, filename, cat, debug=False):
     :param data:
     :return:
     """
+    if img_cat is None:
+        img_cat = "Uncatagorised"
+
     if debug:
         print("[Debug]\tGetting ids")
-    cid = get_con_id(cur, cat, debug)
+    cid = get_con_id(cur, img_cat, debug)
     pid = get_pic_id(cur, filename, debug)
     if debug:
         print("[Debug]\tGot cid='{}' pic='{}'".format(str(cid), str(pid)))
