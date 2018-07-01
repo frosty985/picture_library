@@ -13,6 +13,10 @@ from exif import imgDetails
 """
 Main program for face detection and recognition
 
+To train face recognition, use -t, after program has run, go to 'ouput directory'/Faces and create subdirectory
+for each person '01 Name' as set in the database
+then run train.py
+ 
 Options in config.ini
 
 [database]
@@ -170,7 +174,7 @@ elif args.action == "t" or args.action == "detect":
     img_cat = cat.is_face(args.image, outdir=args.outdir, debug=debug, show=show)
     if debug:
         print("[Debug]\tPicture has cat of : " + str(img_cat))
-    add_cat(args.image, str(img_cat))
+    # add_cat(args.image, str(img_cat))
 
 elif args.action == "c" or args.action == "regcon":
     """ Run facial recognition on image """

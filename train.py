@@ -9,7 +9,7 @@ from PIL import Image
 """ Set program arguments """
 parser = argparse.ArgumentParser("Train facerconginser from samples taken", formatter_class=RawTextHelpFormatter)
 parser.add_argument("src_dir", type=str)
-parser.add_argument("-o", "--output", type=str, default="~/piclib", help="Output directory")
+parser.add_argument("-o", "--output", type=str, default="/tmp/piclib", help="Output directory")
 parser.add_argument("-c", "--config", type=str, default="config.ini", help="Location of config file")
 
 args = parser.parse_args()
