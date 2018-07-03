@@ -6,28 +6,65 @@ import numpy as np
 import copy
 import random
 import cv2
-from PyQt5.QtWidgets import QApplication, QMainWindow, QMessageBox, QDesktopWidget, QAction, qApp, \
+import configparser
+
+from PyQt5.QtWidgets import QApplication, QMainWindow, QMessageBox, QDesktopWidget, QAction, qApp, QDialog, \
     QMenu, QFileSystemModel, QTreeView, QSplitter, QFrame, QAbstractItemView, QListWidget, QListWidgetItem, QListView, \
-    QVBoxLayout, QHBoxLayout, QGridLayout, QTreeWidget, QWidget, QPushButton, QColumnView, QSizePolicy
+    QFormLayout, QLabel, QLineEdit, QVBoxLayout, QHBoxLayout, QGridLayout, QTreeWidget, QWidget, QPushButton, \
+    QColumnView, QSizePolicy, QFileDialog
+
 from PyQt5.QtGui import QIcon, QPixmap
 from PyQt5.QtCore import QDir, Qt, QItemSelection, QSize, QPoint
 
 filename = None
-
+config = None
 homedir = os.path.expanduser(str("~"))
 
-detectDir = None
 workingDir = homedir + "/" + "picture_library"
+configFilename = workingDir + "/" + "config.ini"
 
-# todo check these exist
+config_dirs = None
+config_database = None
+
+outputDir = None
+
+
+def checkConfig():
+    global config
+    global outputDir
+
+    def configDefaults():
+        global outputDir
+        outputDir = workingDir + "/" + "detected"
+
+    if os.path.exists(configFilename):
+        try:
+            config = configparser.ConfigParser()
+            config.read(configFilename)
+            if len(config.sections()) == 0:
+                configDefaults()
+                return False
+        except:
+            configDefaults()
+
+        outputDir = config.get('dirs', 'output')
+
+        config_dirs = config["dirs"]
+        config_database = config["database"]
+    else:
+        configDefaults()
+        return False
+
+
+# failback settings
+# if outputDir is None or len(outputDir) == 0:
+#     outputDir = "objects"
+
+# todo check these exist add to config, turn on / off
+
 face_cascade = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
 eye_cascade = cv2.CascadeClassifier('haarcascade_eye.xml')
 glasses_cascade = cv2.CascadeClassifier('haarcascade_eye_tree_eyeglasses.xml')
-
-# todo add a form of config.. dialog, tabs
-# failback settings
-if detectDir is None or len(detectDir) == 0:
-    detectDir = "objects"
 
 # check folders
 if not os.path.exists(str(workingDir)):
@@ -37,12 +74,20 @@ if not os.path.exists(str(workingDir)):
         print("[Error]\tFailed to create" + str(workingDir))
         exit()
 else:
-    if not os.path.exists(str(workingDir + "/" + detectDir)):
+    if not os.path.exists(str(outputDir)):
         try:
-            os.mkdir(str(workingDir + "/" + detectDir))
+            os.mkdir(str(outputDir))
         except:
-            print("[Error]\tFailed to create" + str(workingDir + "/" + detectDir))
+            print("[Error]\tFailed to create" + str(outputDir))
             exit()
+
+
+def center(window):
+    qr = window.frameGeometry()
+    cp = QDesktopWidget().availableGeometry().center()
+    qr.moveCenter(cp)
+    window.move(qr.topLeft())
+    return True
 
 
 class ImageList:
@@ -117,17 +162,117 @@ class ImageList:
         return color
 
 
+class ConfigDialog(QDialog):
+    def __init__(self):
+        super().__init__()
+        self.initConfigDialog()
+
+    def initConfigDialog(self):
+        layoutMain = QGridLayout()
+        layoutFormDir = QFormLayout()
+        layoutDir = QHBoxLayout()
+        layoutFormDatabase = QFormLayout()
+        layoutButtons = QHBoxLayout()
+
+        self.setLayout(layoutMain)
+
+        self.txtDirOutput = QLineEdit(str(outputDir))
+        self.txtDirOutput.setMinimumWidth(350)
+        self.txtDBUser = QLineEdit(str(config["database"]["user"]))
+        self.txtDBHost = QLineEdit(str(config["database"]["host"]))
+        self.txtDBPass = QLineEdit(str(config["database"]["pass"]))
+        self.txtDBPass.setEchoMode(QLineEdit.Password)
+        self.txtDBBase = QLineEdit(str(config["database"]["base"]))
+
+        lblDirTitle = QLabel("Directories")
+        lblDirOutput = QLabel("Output dir:")
+        lblDatabase = QLabel("Database Settings")
+        lblDBUser = QLabel("Username:")
+        lblDBHost = QLabel("Host:")
+        lblDBPass = QLabel("Password:")
+        lblDBBase = QLabel("Database:")
+
+        btnDirOutput = QPushButton()
+        btnDirOutput.setIcon(QIcon.fromTheme('emblem-photos'))
+        btnDirOutput.clicked.connect(self.getDirOutput)
+        btnSave = QPushButton()
+        btnSave.setIcon(QIcon.fromTheme("document-save"))
+        btnSave.setText("&Save")
+        btnSave.clicked.connect(self.save)
+        btnCancel = QPushButton()
+        btnCancel.setText("&Cancel")
+        btnCancel.clicked.connect(self.cancel)
+
+        layoutButtons.addWidget(btnSave)
+        layoutButtons.addWidget(btnCancel)
+        layoutDir.addWidget(self.txtDirOutput)
+        layoutDir.addWidget(btnDirOutput)
+        layoutFormDir.addRow(lblDirTitle)
+        layoutFormDir.addRow(lblDirOutput, layoutDir)
+
+        layoutFormDatabase.addRow(lblDatabase)
+        layoutFormDatabase.addRow(lblDBHost, self.txtDBHost)
+        layoutFormDatabase.addRow(lblDBUser, self.txtDBUser)
+        layoutFormDatabase.addRow(lblDBPass, self.txtDBPass)
+        layoutFormDatabase.addRow(lblDBBase, self.txtDBBase)
+
+        layoutMain.addWidget(QLabel("Config"), 0, 0)
+        layoutMain.addLayout(layoutFormDir, 1, 0)
+        layoutMain.addLayout(layoutFormDatabase, 1, 1)
+        layoutMain.addLayout(layoutButtons, 2, 0)
+
+        self.resize(self.sizeHint())
+        center(self)
+        self.show()
+
+    def getDirOutput(self):
+        dirname = str(QFileDialog.getExistingDirectory())
+        print(str(dirname))
+        self.txtDirOutput.setText(str(dirname))
+
+    def save(self):
+        # if config is not None:
+        config = configparser.ConfigParser()
+        # config.read(configFilename)
+        config['dirs'] = {}
+        config['database'] = {}
+        config['dirs']['output'] = str(self.txtDirOutput.text())
+        config['database']['user'] = str(self.txtDBUser.text())
+        config['database']['pass'] = str(self.txtDBPass.text())
+        config['database']['host'] = str(self.txtDBHost.text())
+        config['database']['base'] = str(self.txtDBBase.text())
+        with open(configFilename, 'w') as configfile:
+            config.write(configfile)
+        self.reload()
+        self.done(0)
+
+    def reload(self):
+        checkConfig()
+
+    def cancel(self):
+        self.done(0)
+
+
 class Window(QMainWindow):
 
     def __init__(self):
         super().__init__()
-
         self.initUI()
+        # if checkConfig() is False:
+        #     configDialog = ConfigDialog()
+        #     configDialog.show()
 
     def initUI(self):
 
         self.showMaximized()
-        self.center()
+        if checkConfig() is False:
+            QMessageBox.warning(self, "No Config",
+                                "No configuration file has been found, please adjust the defaults and create a new file",
+                                QMessageBox.Ok)
+
+            self.openDialogConfig()
+
+        center(self)
         self.setWindowTitle('Picture Library')
 
         self.menuSystem()
@@ -171,13 +316,6 @@ class Window(QMainWindow):
         self.listImages.clear()
         self.listImagesRefresh(workingDir)
 
-
-    def center(self):
-        qr = self.frameGeometry()
-        cp = QDesktopWidget().availableGeometry().center()
-        qr.moveCenter(cp)
-        self.move(qr.topLeft())
-
     def treeDirBuild(self):
         self.model = QFileSystemModel()
         self.model.setRootPath(QDir.rootPath())
@@ -209,6 +347,10 @@ class Window(QMainWindow):
         self.actQuit.setShortcut('Ctrl+Q')
         self.actQuit.setStatusTip('Quit Application')
         self.actQuit.triggered.connect(self.onQuit)
+        self.actConfig = QAction(QIcon.fromTheme('emblem-system'), '&Settings', self)
+        self.actConfig.setShortcut('Ctrl+C')
+        self.actConfig.setStatusTip('Settings')
+        self.actConfig.triggered.connect(self.openDialogConfig)
         self.actImport = QAction('Import something', self)
         self.actStatus = QAction('Show &Statusbar', self, checkable=True)
         self.actStatus.setChecked(True)
@@ -218,16 +360,22 @@ class Window(QMainWindow):
 
         menuSubImport.addAction(self.actImport)
         menuFile.addMenu(menuSubImport)
+        menuFile.addAction(self.actConfig)
         menuFile.addAction(self.actQuit)
         menuWindow.addAction(self.actStatus)
 
         toolbar = self.addToolBar('Quit')
         toolbar.addAction(self.actQuit)
+        toolbar.addAction(self.actConfig)
 
     def listImagesContextMenu(self, pos):
         menu = QMenu(self)
         menu.addAction(self.actDetectObjects)
         menu.exec_(self.listImages.mapToGlobal(pos))
+
+    def openDialogConfig(self):
+        self.ConfigDialog = ConfigDialog()
+        self.ConfigDialog.show()
 
     def toggleStatus(self, state):
         if state:
